@@ -1,38 +1,120 @@
+/* Structure de base */
 body {
-    font-family: Arial, sans-serif;
-    background: #f0f0f0;
+    margin: 0;
+    padding: 0;
+    font-family: 'Roboto', sans-serif;
+    background-image: url('static/marrakech-bg.jpg'); /* Image de fond */
+    background-size: cover;
+    background-position: center;
+    height: 100vh;
     display: flex;
-    justify-content: center;
-    padding-top: 50px;
+    justify-content: center; /* Centrer le chat horizontalement */
+    align-items: center; /* Centrer le chat verticalement */
 }
 
+/* Conteneur principal du chat */
 .chat-container {
-    background: white;
-    padding: 20px;
+    background-color: rgba(255, 255, 255, 0.9); /* Fond blanc semi-transparent pour les messages */
     border-radius: 15px;
-    width: 400px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    width: 60%; /* Largeur du chat */
+    max-width: 900px;
+    height: 80%; /* Hauteur du chat */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* Espacer le chat-box et l'input-group */
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    overflow: hidden;
 }
 
+/* Titre du chatbot */
+.chat-container h2 {
+    text-align: center;
+    font-size: 2em;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    font-weight: bold;
+}
+
+/* Conteneur des messages du chat */
 #chat-box {
-    height: 300px;
-    overflow-y: scroll;
-    border: 1px solid #ccc;
-    padding: 10px;
-    margin-bottom: 10px;
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 15px;
+    background-color: #f7f7f7;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    box-shadow: inset 0px 0px 10px rgba(0, 0, 0, 0.1);
 }
 
+/* Style des messages du bot */
+.bot-message {
+    background-color: #3498db;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 12px;
+    margin: 10px 0;
+    max-width: 70%;
+    display: flex;
+    align-items: center;
+    margin-right: auto; /* Assure que les messages du bot s'affichent à gauche */
+}
+
+/* Agrandir l'image du bot */
+.bot-message img {
+    width: 200px; /* Augmenter la taille de l'image */
+    height: 200px; /* Garder la hauteur proportionnelle */
+    border-radius: 10%;
+    margin-right: 15px;
+}
+
+/* Style des messages de l'utilisateur */
+.user-message {
+    background-color: #ecf0f1;
+    color: #2c3e50;
+    padding: 10px 20px;
+    border-radius: 12px;
+    margin: 10px 0;
+    max-width: 70%;  /* Limite la largeur à 70% */
+    text-align: right;  /* Aligne le texte à droite */
+    margin-left: auto;  /* Pousse le message à droite */
+    display: inline-block;  /* Permet de s'ajuster à la taille du texte */
+    word-wrap: break-word;  /* Empêche le texte de déborder */
+    white-space: pre-wrap;  /* Gère les retours à la ligne */
+    line-height: 1.5;  /* Augmente la lisibilité */
+}
+
+/* Zone de saisie du message */
 .input-group {
     display: flex;
-    gap: 10px;
+    justify-content: space-between;
+    width: 100%;
 }
 
 #user-input {
-    flex: 1;
-    padding: 8px;
+    width: 80%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 1em;
 }
 
 button {
-    padding: 8px 12px;
+    padding: 12px 18px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 8px;
     cursor: pointer;
+    font-size: 1.1em;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #2980b9;
+}
+
+#user-input:focus {
+    outline: none;
+    border-color: #3498db;
 }
