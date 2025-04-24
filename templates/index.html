@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Chatbot Touristique du Maroc</title>
-    <link rel="stylesheet" href="main.css">
-
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <div class="chat-container">
@@ -13,7 +12,6 @@
         <div class="input-group">
             <input type="text" id="user-input" placeholder="Posez votre question ici...">
             <button onclick="sendMessage()">Envoyer</button>
-            
         </div>
     </div>
 
