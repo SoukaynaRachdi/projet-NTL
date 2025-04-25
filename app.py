@@ -1,9 +1,14 @@
 import pandas as pd
 
-# Charger les données
-ma_df = pd.read_csv('ma.csv')
-monument_df = pd.read_csv('monument.csv')
+ 
+import pandas as pd
 
+# Spécifie le chemin absolu vers le fichier CSV
+fichier_csv1 = '/workspaces/projet-NTL/monuments_maroc.csv'
+fichier_csv2= '/workspaces/projet-NTL/ma.csv'
+# Charger le fichier CSV
+monument_df = pd.read_csv(fichier_csv1)
+ma_df = pd.read_csv(fichier_csv2)
 # Exemple : afficher les premières lignes des données
 print(ma_df.head())
 print(monument_df.head())
