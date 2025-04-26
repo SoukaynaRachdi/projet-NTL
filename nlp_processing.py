@@ -27,3 +27,10 @@ def preprocessing(texte):
     tokens = tokenisation(texte_nettoye)
     lemmes = lemmatisation(tokens)
     return lemmes
+
+def extract_city(texte):
+    doc = nlp(texte)
+    for ent in doc.ents:
+        if ent.label_ == "LOC" or ent.label_ == "GPE":
+            return ent.text
+    return None
