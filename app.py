@@ -1,38 +1,18 @@
-import pandas as pd
-
- 
-import pandas as pd
-
-# Spécifie le chemin absolu vers le fichier CSV
-fichier_csv1 = '/workspaces/projet-NTL/monuments_maroc.csv'
-fichier_csv2= '/workspaces/projet-NTL/ma.csv'
-# Charger le fichier CSV
-monument_df = pd.read_csv(fichier_csv1)
-ma_df = pd.read_csv(fichier_csv2)
-# Exemple : afficher les premières lignes des données
-print(ma_df.head())
-print(monument_df.head())
-import spacy
-
-# Charger le modèle linguistique français
-nlp = spacy.load("fr_core_news_md")
-
-# Exemple : analyser un texte
-doc = nlp("Où se trouve la ville de Marrakech ?")
-for ent in doc.ents:
-    print(ent.text, ent.label_)
 from flask import Flask, render_template, request, jsonify
 import pandas as pd
 import spacy
+from nlp_processing import preprocessing  # Importation du module de prétraitement
 
 app = Flask(__name__)
 
-# Charger les données
-ma_df = pd.read_csv('ma.csv')
-monument_df = pd.read_csv('monument.csv')
-
 # Charger le modèle linguistique français
 nlp = spacy.load("fr_core_news_md")
+
+# Charger les fichiers CSV
+fichier_csv1 = '/workspaces/projet-NTL/monuments_maroc.csv'
+fichier_csv2 = '/workspaces/projet-NTL/ma.csv'
+monument_df = pd.read_csv(fichier_csv1)
+ma_df = pd.read_csv(fichier_csv2)
 
 @app.route("/")
 def index():
@@ -41,7 +21,11 @@ def index():
 @app.route("/chat", methods=["POST"])
 def chat():
     user_message = request.json.get("message")
-    doc = nlp(user_message)
+    
+    # Prétraiter le message de l'utilisateur
+    processed_message = preprocessing(user_message)
+    
+    doc = nlp(" ".join(processed_message))
 
     # Rechercher une ville dans le message
     ville = None
