@@ -21,10 +21,9 @@ def index():
 def chat():
     user_message = request.json.get("message")
     
-    # ⚡ Utiliser directement spaCy sur le texte brut pour détecter la ville
     doc = nlp(user_message)
 
-    # Rechercher une ville dans le message
+    # CORRECTION ici : utiliser GPE
     ville = None
     for ent in doc.ents:
         if ent.label_ == "GPE":
@@ -35,7 +34,6 @@ def chat():
         # Rechercher des informations sur la ville dans le CSV
         ville_info = ma_df[ma_df['city'].str.contains(ville, case=False, na=False)]
         if not ville_info.empty:
-            # Construire la réponse avec les informations trouvées
             response = f"La ville de {ville} est située en {ville_info['country'].iloc[0]} avec une population de {ville_info['population'].iloc[0]} habitants."
         else:
             response = f"Je n'ai pas trouvé d'informations sur la ville de {ville}."
@@ -43,6 +41,6 @@ def chat():
         response = "Je n'ai pas compris le nom de la ville. Pouvez-vous reformuler votre question ?"
 
     return jsonify({"response": response})
-
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
+ 
