@@ -45,7 +45,8 @@ def chat():
             break
 
     if not entite:
-        entite = user_message.strip()
+        mots = [token.text for token in doc if not token.is_stop and not token.is_punct]
+        entite = mots[-1] if mots else user_message.strip()
 
     # Chercher dans la base des villes
     ville_info = ma_df[ma_df['city'].str.contains(entite, case=False, na=False)]
