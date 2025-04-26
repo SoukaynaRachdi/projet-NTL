@@ -3,25 +3,32 @@ body {
     margin: 0;
     padding: 0;
     font-family: 'Roboto', sans-serif;
-    background-image: url('https://i.pinimg.com/474x/4f/88/1d/4f881dc63f6f0632e8ede364c6a46c81.jpg'); /* Image de fond */
+    background-image: url('https://i.pinimg.com/474x/4f/88/1d/4f881dc63f6f0632e8ede364c6a46c81.jpg');
+    /* Image de fond */
     background-size: right;
     background-position: center;
     height: 100vh;
     display: flex;
-    justify-content: center; /* Centrer le chat horizontalement */
-    align-items: center; /* Centrer le chat verticalement */
+    justify-content: center;
+    /* Centrer le chat horizontalement */
+    align-items: center;
+    /* Centrer le chat verticalement */
 }
 
 /* Conteneur principal du chat */
 .chat-container {
-    background-color: rgba(255, 255, 255, 0.9); /* Fond blanc semi-transparent pour les messages */
+    background-color: rgba(255, 255, 255, 0.9);
+    /* Fond blanc semi-transparent pour les messages */
     border-radius: 15px;
-    width: 60%; /* Largeur du chat */
+    width: 60%;
+    /* Largeur du chat */
     max-width: 900px;
-    height: 80%; /* Hauteur du chat */
+    height: 80%;
+    /* Hauteur du chat */
     display: flex;
     flex-direction: column;
-    justify-content: space-between; /* Espacer le chat-box et l'input-group */
+    justify-content: space-between;
+    /* Espacer le chat-box et l'input-group */
     box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
     padding: 20px;
     overflow: hidden;
@@ -57,13 +64,16 @@ body {
     max-width: 95%;
     display: flex;
     align-items: center;
-    margin-right: auto; /* Assure que les messages du bot s'affichent à gauche */
+    margin-right: auto;
+    /* Assure que les messages du bot s'affichent à gauche */
 }
 
 /* Agrandir l'image du bot */
 .bot-message img {
-    width: 200px; /* Augmenter la taille de l'image */
-    height: 200px; /* Garder la hauteur proportionnelle */
+    width: 200px;
+    /* Augmenter la taille de l'image */
+    height: 200px;
+    /* Garder la hauteur proportionnelle */
     border-radius: 10%;
     margin-right: 15px;
 }
@@ -75,33 +85,53 @@ body {
     padding: 10px 20px;
     border-radius: 12px;
     margin: 10px 0;
-    max-width: 70%;  /* Limite la largeur à 70% */
-    text-align: right;  /* Aligne le texte à droite */
-    margin-left: auto;  /* Pousse le message à droite */
-    display: inline-block;  /* Permet de s'ajuster à la taille du texte */
-    word-wrap: break-word;  /* Empêche le texte de déborder */
-    white-space: pre-wrap;  /* Gère les retours à la ligne */
-    line-height: 1.5;  /* Augmente la lisibilité */
+    max-width: 70%;
+    /* Limite la largeur à 70% */
+    text-align: right;
+    /* Aligne le texte à droite */
+    margin-left: auto;
+    /* Pousse le message à droite */
+    display: inline-block;
+    /* Permet de s'ajuster à la taille du texte */
+    word-wrap: break-word;
+    /* Empêche le texte de déborder */
+    white-space: pre-wrap;
+    /* Gère les retours à la ligne */
+    line-height: 1.5;
+    /* Augmente la lisibilité */
 }
 
 /* Zone de saisie du message */
 .input-group {
     display: flex;
-    justify-content: space-between;
+    align-items: center;
+    /* pour aligner les éléments sur la même ligne */
+    gap: 10px;
+    /* espace entre input et bouton */
     width: 100%;
 }
 
 #user-input {
-    width: 80%;
+    flex: 1;
+    /* prend toute la place disponible */
     padding: 10px;
     border-radius: 8px;
     border: 1px solid #ccc;
     font-size: 1em;
 }
 
-button {
+/* Conteneur des boutons envoyer + carte */
+.button-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    /* espace entre Envoyer et Carte */
+}
+
+/* Bouton Envoyer */
+#send-button {
     padding: 12px 18px;
-    background-color: #3498db;
+    background-color: #68c1fc;
     color: white;
     border: none;
     border-radius: 8px;
@@ -110,31 +140,28 @@ button {
     transition: background-color 0.3s ease;
 }
 
-button:hover {
-    background-color: #2980b9;
+#send-button:hover {
+    background-color: #abd7f5;
 }
 
-#user-input:focus {
-    outline: none;
-    border-color: #3498db;
-}
-#scroll-button {
-    position: fixed;
-    bottom: 120px; /* Position légèrement au-dessus du bas */
-    left: 50%;
-    transform: translateX(-50%);
-    display: none; /* Initialement caché */
-    width: 15px;
-    height: 15px;
-    font-size: 13px;
-    border-radius: 50%;
-    background-color: #d8dade;
-    color: white;
+/* Bouton Carte */
+#map-button {
+    padding: 8px;
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    background-color: #aeb4fe;
+    /* vert */
     border: none;
-    cursor: pointer;
+    border-radius: 50%;
+    /* rond */
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
 }
 
+#map-button:hover {
+    background-color: #d7dcd8;
+}

@@ -81,3 +81,9 @@ window.addEventListener('load', checkScrollButtonVisibility);
 scrollButton.addEventListener('click', function () {
     chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' }); 
 });
+
+document.getElementById('map-button').addEventListener('click', function() {
+    // Exemple simple : ouvrir Google Maps
+    window.open('https://www.google.com/maps', '_blank');
+});
+
