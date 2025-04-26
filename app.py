@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 import pandas as pd
 import spacy
-from nlp_processing import preprocessing  # Importation du module de prétraitement
 
 app = Flask(__name__)
 
@@ -22,21 +21,21 @@ def index():
 def chat():
     user_message = request.json.get("message")
     
-    # Prétraiter le message de l'utilisateur
-    lemmes, entities = preprocessing(user_message)
-    
-    # Si des entités sont extraites, on essaie de trouver une ville dans ces entités
+    # ⚡ Utiliser directement spaCy sur le texte brut pour détecter la ville
+    doc = nlp(user_message)
+
+    # Rechercher une ville dans le message
     ville = None
-    for entity in entities:
-        if "GPE" in nlp(entity).ents or "LOC" in nlp(entity).ents:  # Vérifie que c'est une entité géographique
-            ville = entity
+    for ent in doc.ents:
+        if ent.label_ == "GPE":
+            ville = ent.text
             break
 
     if ville:
-        # Recherche des informations sur la ville dans ma_df
+        # Rechercher des informations sur la ville dans le CSV
         ville_info = ma_df[ma_df['city'].str.contains(ville, case=False, na=False)]
         if not ville_info.empty:
-            # Construire une réponse avec les informations disponibles
+            # Construire la réponse avec les informations trouvées
             response = f"La ville de {ville} est située en {ville_info['country'].iloc[0]} avec une population de {ville_info['population'].iloc[0]} habitants."
         else:
             response = f"Je n'ai pas trouvé d'informations sur la ville de {ville}."
