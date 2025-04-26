@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <title>Chatbot Touristique du Maroc</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
     <div class="chat-container">
         <h2>💬 Assistant Touristique du Maroc</h2>
@@ -17,10 +19,11 @@
             <input type="text" id="user-input" placeholder="Posez votre question ici...">
             <button onclick="sendMessage()">Envoyer</button>
         </div>
-      
-        
+
+        <button id="scroll-button">↓</button>
     </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
+
 </html>

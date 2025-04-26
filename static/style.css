@@ -118,3 +118,23 @@ button:hover {
     outline: none;
     border-color: #3498db;
 }
+#scroll-button {
+    position: fixed;
+    bottom: 120px; /* Position légèrement au-dessus du bas */
+    left: 50%;
+    transform: translateX(-50%);
+    display: none; /* Initialement caché */
+    width: 15px;
+    height: 15px;
+    font-size: 13px;
+    border-radius: 50%;
+    background-color: #d8dade;
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
