@@ -2,9 +2,9 @@ from flask import Flask, render_template, request, jsonify
 import pandas as pd
 import spacy
 
-app = Flask(__name__)
+app = Flask(__name__) 
 
-# Charger le modèle linguistique français
+# Charger le modèle linguistique françai
 nlp = spacy.load("fr_core_news_md")
 
 # Charger les fichiers CSV
@@ -17,35 +17,69 @@ ma_df = pd.read_csv(fichier_csv2)
 def index():
     return render_template("index.html")
 
+def detect_intention(text):
+    """ Détecter si l'utilisateur demande la population, la ville ou des détails. """
+    text = text.lower()
+    if "population" in text:
+        return "population"
+    elif "ville" in text or "où" in text or "localisation" in text:
+        return "ville"
+    elif "description" in text or "information" in text or "parle-moi" in text or "présente" in text:
+        return "description"
+    else:
+        return "general"
+
 @app.route("/chat", methods=["POST"])
 def chat():
     user_message = request.json.get("message")
-    
-    # Utiliser spaCy pour essayer de détecter une entité
     doc = nlp(user_message)
 
-    ville = None
+    # Détecter l'intention
+    intention = detect_intention(user_message)
+
+    # Chercher une entité reconnue (ville ou monument)
+    entite = None
     for ent in doc.ents:
-        if ent.label_ == "LOC":
-            ville = ent.text
+        if ent.label_ == "LOC" or ent.label_ == "PER" or ent.label_ == "MISC":
+            entite = ent.text
             break
 
-    # ✅ Si spaCy n'a rien trouvé, prendre directement ce que l'utilisateur a écrit
-    if not ville:
-        ville = user_message.strip()
+    if not entite:
+        entite = user_message.strip()
 
-    # Chercher d'abord dans la base des villes
-    ville_info = ma_df[ma_df['city'].str.contains(ville, case=False, na=False)]
+    # Chercher dans la base des villes
+    ville_info = ma_df[ma_df['city'].str.contains(entite, case=False, na=False)]
 
     if not ville_info.empty:
-        response = f"La ville de {ville} est située en {ville_info['country'].iloc[0]} avec une population de {ville_info['population'].iloc[0]} habitants."
+        ville = ville_info.iloc[0]
+
+        if intention == "population":
+            response = f"La population de {ville['city']} est de {ville['population']} habitants."
+        elif intention == "ville":
+            response = f"{ville['city']} est une ville située en {ville['country']}."
+        else:
+            response = f"{ville['city']} est une ville du {ville['country']} avec une population de {ville['population']} habitants."
+
+        # Ajouter l'image de la ville si dispo dans monuments
+        image_ville_info = monument_df[monument_df['ville'].str.contains(entite, case=False, na=False)]
+        if not image_ville_info.empty:
+            image_url = image_ville_info.iloc[0]['image_ville_url']
+            response += f" Voici une image : {image_url}"
+
     else:
-        # Si ce n'est pas une ville, on cherche dans les monuments
-        monument_info = monument_df[monument_df['nom'].str.contains(ville, case=False, na=False)]
+        # Sinon chercher dans la base des monuments
+        monument_info = monument_df[monument_df['nom'].str.contains(entite, case=False, na=False)]
 
         if not monument_info.empty:
-            info = monument_info.iloc[0]
-            response = f"{info['nom']} est un {info['type']} situé à {info['ville']}. {info['description']} Pour en savoir plus : {info['lien_wikipedia']}."
+            monument = monument_info.iloc[0]
+
+            if intention == "ville":
+                response = f"Le monument {monument['nom']} est situé à {monument['ville']}. Veux-tu plus d'informations ?"
+            else:
+                response = (f"{monument['nom']} est un {monument['type']} situé à {monument['ville']}. "
+                            f"{monument['description']} Pour en savoir plus : {monument['lien_wikipedia']}.")
+
+                response += f" Voici une image : {monument['image_monument_url']}"
         else:
             response = "Je n'ai pas trouvé d'informations correspondantes. Pouvez-vous reformuler votre question ?"
 
@@ -53,3 +87,4 @@ def chat():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
+ 

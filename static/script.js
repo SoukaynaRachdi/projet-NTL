@@ -1,3 +1,13 @@
+// Fonction pour ajouter un message dans le chatbox
+function addMessage(message, sender) {
+    const chatbox = document.getElementById('chat-box');
+    const messageElement = document.createElement('div');
+    messageElement.className = sender;
+    messageElement.innerHTML = message; // Permet d'afficher du HTML (images, liens, etc.)
+    chatbox.appendChild(messageElement);
+    chatbox.scrollTop = chatbox.scrollHeight; // Scroll automatique en bas
+}
+
 function sendMessage() {
     const userInput = document.getElementById('user-input').value;
     if (userInput.trim() !== '') {

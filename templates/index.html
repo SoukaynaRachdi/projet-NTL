@@ -10,12 +10,15 @@
     <div class="chat-container">
         <h2>💬 Assistant Touristique du Maroc</h2>
         <div id="chat-box">
+            <!-- Les messages seront ajoutés ici -->
         </div>
 
         <div class="input-group">
             <input type="text" id="user-input" placeholder="Posez votre question ici...">
             <button onclick="sendMessage()">Envoyer</button>
         </div>
+      
+        
     </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
