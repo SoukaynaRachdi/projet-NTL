@@ -31,8 +31,7 @@ function sendMessage() {
         .then(data => {
             const botMessage = document.createElement('div');
             botMessage.classList.add('bot-message');
-
-            botMessage.innerHTML = data.response; // <= changer ici
+            botMessage.innerHTML = data.response; // Permet d'insérer du HTML (images, etc.)
 
             chatBox.appendChild(botMessage);
             chatBox.scrollTop = chatBox.scrollHeight;
@@ -42,4 +41,12 @@ function sendMessage() {
             console.error("Erreur:", error);
         });
     }
-} 
+}
+
+// Écouter la touche "Entrée" (ajouter cet écouteur)
+document.getElementById('user-input').addEventListener('keydown', function(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault(); // Empêche le saut de ligne
+        sendMessage();
+    }
+});

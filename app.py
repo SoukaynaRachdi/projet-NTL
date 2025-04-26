@@ -64,7 +64,8 @@ def chat():
         image_ville_info = monument_df[monument_df['ville'].str.contains(entite, case=False, na=False)]
         if not image_ville_info.empty:
             image_url = image_ville_info.iloc[0]['image_ville_url']
-            response += f'<br><img src="{image_url}" alt="Image de la ville" width="300">'
+            response += f'<br><img src="{image_url}" alt="Image de la ville" width="400" style="padding-right: 20px;">'
+
 
 
     else:
