@@ -165,3 +165,23 @@ body {
 #map-button:hover {
     background-color: #d7dcd8;
 }
+
+#scroll-button {
+    position: fixed;
+    bottom: 120px; /* Position légèrement au-dessus du bas */
+    left: 50%;
+    transform: translateX(-50%);
+    display: none; /* Initialement caché */
+    width: 25px;
+    height: 25px;
+    font-size: 20px;
+    border-radius: 50%;
+    background-color: #b0b0b0;
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
