@@ -22,15 +22,21 @@ def lemmatisation(tokens):
     lemmes = [token.lemma_ for token in doc]
     return lemmes
 
+def extract_entities(texte):
+    doc = nlp(texte)
+    entities = []
+    for ent in doc.ents:
+        if ent.label_ in ["GPE", "LOC"]:  # GPE et LOC sont des labels pour les entités géographiques (villes, pays)
+            entities.append(ent.text)
+    return entities
+
 def preprocessing(texte):
     texte_nettoye = nettoyer_texte(texte)
     tokens = tokenisation(texte_nettoye)
     lemmes = lemmatisation(tokens)
-    return lemmes
-
-def extract_city(texte):
-    doc = nlp(texte)
-    for ent in doc.ents:
-        if ent.label_ == "LOC" or ent.label_ == "GPE":
-            return ent.text
-    return None
+    
+    # Extraire les entités nommées du texte
+    entities = extract_entities(texte)
+    
+    # Retourner les lemmes et les entités
+    return lemmes, entities

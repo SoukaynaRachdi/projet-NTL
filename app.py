@@ -23,22 +23,20 @@ def chat():
     user_message = request.json.get("message")
     
     # Prétraiter le message de l'utilisateur
-    processed_message = preprocessing(user_message)
+    lemmes, entities = preprocessing(user_message)
     
-    doc = nlp(" ".join(processed_message))
-
-    # Rechercher une ville dans le message
+    # Si des entités sont extraites, on essaie de trouver une ville dans ces entités
     ville = None
-    for ent in doc.ents:
-        if ent.label_ == "GPE":  # GPE correspond à une entité géopolitique (ville, pays, etc.)
-            ville = ent.text
+    for entity in entities:
+        if "GPE" in nlp(entity).ents or "LOC" in nlp(entity).ents:  # Vérifie que c'est une entité géographique
+            ville = entity
             break
 
     if ville:
-        # Rechercher des informations sur la ville
+        # Recherche des informations sur la ville dans ma_df
         ville_info = ma_df[ma_df['city'].str.contains(ville, case=False, na=False)]
         if not ville_info.empty:
-            # Construire une réponse basée sur les informations de la ville
+            # Construire une réponse avec les informations disponibles
             response = f"La ville de {ville} est située en {ville_info['country'].iloc[0]} avec une population de {ville_info['population'].iloc[0]} habitants."
         else:
             response = f"Je n'ai pas trouvé d'informations sur la ville de {ville}."
@@ -48,4 +46,4 @@ def chat():
     return jsonify({"response": response})
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5001, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
