@@ -64,7 +64,8 @@ def chat():
         image_ville_info = monument_df[monument_df['ville'].str.contains(entite, case=False, na=False)]
         if not image_ville_info.empty:
             image_url = image_ville_info.iloc[0]['image_ville_url']
-            response += f" Voici une image : {image_url}"
+            response += f'<br><img src="{image_url}" alt="Image de la ville" width="300">'
+
 
     else:
         # Sinon chercher dans la base des monuments
@@ -79,7 +80,8 @@ def chat():
                 response = (f"{monument['nom']} est un {monument['type']} situé à {monument['ville']}. "
                             f"{monument['description']} Pour en savoir plus : {monument['lien_wikipedia']}.")
 
-                response += f" Voici une image : {monument['image_monument_url']}"
+                response += f'<br><img src="{monument["image_monument_url"]}" alt="Image du monument" width="300">'
+
         else:
             response = "Je n'ai pas trouvé d'informations correspondantes. Pouvez-vous reformuler votre question ?"
 

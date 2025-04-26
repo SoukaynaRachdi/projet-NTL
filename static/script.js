@@ -12,14 +12,12 @@ function sendMessage() {
     const userInput = document.getElementById('user-input').value;
     if (userInput.trim() !== '') {
         const chatBox = document.getElementById('chat-box');
-        
-        // Ajouter le message de l'utilisateur
+
         const userMessage = document.createElement('div');
         userMessage.classList.add('user-message');
         userMessage.textContent = userInput;
         chatBox.appendChild(userMessage);
-        
-        // Envoyer la requête à l'API Flask
+
         fetch("/chat", {
             method: "POST",
             headers: {
@@ -33,22 +31,15 @@ function sendMessage() {
         .then(data => {
             const botMessage = document.createElement('div');
             botMessage.classList.add('bot-message');
-            
-            const textElement = document.createElement('p');
-            textElement.textContent = data.response;
-            
-            botMessage.appendChild(textElement);
+
+            botMessage.innerHTML = data.response; // <= changer ici
+
             chatBox.appendChild(botMessage);
-            
-            // Faire défiler vers le bas
             chatBox.scrollTop = chatBox.scrollHeight;
-            
-            // Réinitialiser le champ de saisie
             document.getElementById('user-input').value = '';
         })
         .catch(error => {
             console.error("Erreur:", error);
         });
     }
-}
-
+} 
