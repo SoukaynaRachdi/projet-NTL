@@ -1,8 +1,15 @@
 from flask import Flask, render_template, request, jsonify
 import pandas as pd
 import spacy
+import unicodedata
 
 app = Flask(__name__) 
+def enlever_accents(texte):
+    """Supprimer les accents d'un texte."""
+    return ''.join(
+        c for c in unicodedata.normalize('NFD', texte)
+        if unicodedata.category(c) != 'Mn'
+    )
 
 # Charger le modèle linguistique françai
 nlp = spacy.load("fr_core_news_md")
@@ -12,6 +19,10 @@ fichier_csv1 = '/workspaces/projet-NTL/monuments_maroc.csv'
 fichier_csv2 = '/workspaces/projet-NTL/ma.csv'
 monument_df = pd.read_csv(fichier_csv1)
 ma_df = pd.read_csv(fichier_csv2)
+
+ma_df['city_noaccent'] = ma_df['city'].apply(lambda x: enlever_accents(str(x).lower()))
+monument_df['ville_noaccent'] = monument_df['ville'].apply(lambda x: enlever_accents(str(x).lower()))
+monument_df['nom_noaccent'] = monument_df['nom'].apply(lambda x: enlever_accents(str(x).lower()))
 
 @app.route("/")
 def index():
@@ -47,9 +58,10 @@ def chat():
     if not entite:
         mots = [token.text for token in doc if not token.is_stop and not token.is_punct]
         entite = mots[-1] if mots else user_message.strip()
+    entite_sans_accent = enlever_accents(entite.lower())
 
     # Chercher dans la base des villes
-    ville_info = ma_df[ma_df['city'].str.contains(entite, case=False, na=False)]
+    ville_info = ma_df[ma_df['city_noaccent'].str.contains(entite_sans_accent, na=False)]
 
     if not ville_info.empty:
         ville = ville_info.iloc[0]
@@ -62,7 +74,8 @@ def chat():
             response = f"{ville['city']} est une ville du {ville['country']} avec une population de {ville['population']} habitants."
 
         # Ajouter l'image de la ville si dispo dans monuments
-        image_ville_info = monument_df[monument_df['ville'].str.contains(entite, case=False, na=False)]
+        monument_df['ville_noaccent'] = monument_df['ville'].apply(lambda x: enlever_accents(str(x).lower()))
+        image_ville_info = monument_df[monument_df['ville_noaccent'].str.contains(entite_sans_accent, na=False)]
         if not image_ville_info.empty:
             image_url = image_ville_info.iloc[0]['image_ville_url']
             response += f'<br><img src="{image_url}" alt="Image de la ville" width="400" style="padding-right: 20px;">'
@@ -71,7 +84,7 @@ def chat():
 
     else:
         # Sinon chercher dans la base des monuments
-        monument_info = monument_df[monument_df['nom'].str.contains(entite, case=False, na=False)]
+        monument_info = monument_df[monument_df['nom_noaccent'].str.contains(entite_sans_accent, na=False)]
 
         if not monument_info.empty:
             monument = monument_info.iloc[0]
