@@ -5,6 +5,7 @@ import unicodedata
 from langdetect import detect
 from deep_translator import GoogleTranslator
 from rapidfuzz import process, fuzz
+import re
 
 app = Flask(__name__)
 
@@ -14,6 +15,21 @@ def enlever_accents(texte):
         c for c in unicodedata.normalize('NFD', texte)
         if unicodedata.category(c) != 'Mn'
     )
+
+# Fonction pour traduire uniquement le texte (sans balises HTML)
+def traduire_texte_sans_html(texte, langue_source, langue_cible):
+    segments = re.split(r'(<[^>]+>)', texte)
+    segments_traduits = []
+    for segment in segments:
+        if re.match(r'<[^>]+>', segment):
+            segments_traduits.append(segment)
+        else:
+            if segment.strip():
+                segment_traduit = GoogleTranslator(source=langue_source, target=langue_cible).translate(segment)
+                segments_traduits.append(segment_traduit)
+            else:
+                segments_traduits.append(segment)
+    return ''.join(segments_traduits)
 
 # Charger le modèle SpaCy français
 nlp = spacy.load("fr_core_news_md")
@@ -64,8 +80,13 @@ def trouver_meilleure_correspondance(entite, liste_valeurs):
 @app.route("/chat", methods=["POST"])
 def chat():
     user_message = request.json.get("message")
-    doc = nlp(user_message)
     langue_message = detect(user_message)
+
+    # Traduction du message arabe en français
+    if langue_message == 'ar':
+        user_message = GoogleTranslator(source='ar', target='fr').translate(user_message)
+
+    doc = nlp(user_message)
     intention = detect_intention(user_message)
 
     # Extraire entité
@@ -79,10 +100,11 @@ def chat():
         entite = mots[-1] if mots else user_message.strip()
 
     entite_sans_accent = enlever_accents(entite.lower())
+    response = "Désolé, je n'ai pas compris votre demande."
 
-    # --- Cas intention "monument"
+    # Cas "monument"
     if intention == "monument":
-        if "maroc" in entite.lower():  # Cas où on parle de tous les monuments du Maroc
+        if "maroc" in entite.lower():
             monuments = monument_df[['nom', 'ville', 'type']].dropna().drop_duplicates()
             response = "Voici une liste de monuments célèbres au Maroc :<br>"
             for _, row in monuments.iterrows():
@@ -95,17 +117,18 @@ def chat():
                     response = f"Voici quelques monuments situés à {monuments_ville.iloc[0]['ville']} :<br>"
                     for _, row in monuments_ville.iterrows():
                         response += f"- {row['nom']} ({row['type']})<br>"
-            else:
-                response = "Je n'ai pas trouvé de monuments correspondant à votre demande."
+                else:
+                    response = "Je n'ai pas trouvé de monuments correspondant à votre demande."
 
-        # Traduction si besoin
+        # Traduction finale
         if langue_message == 'ar':
-            response = GoogleTranslator(source='fr', target='ar').translate(response)
+            response = traduire_texte_sans_html(response, 'fr', 'ar')
         elif langue_message == 'en':
-            response = GoogleTranslator(source='fr', target='en').translate(response)
+            response = traduire_texte_sans_html(response, 'fr', 'en')
+
         return jsonify({"response": response})
 
-    # Si intention autre (ville, description, population)
+    # Autres intentions
     meilleure_ville = trouver_meilleure_correspondance(entite_sans_accent, liste_villes)
 
     if meilleure_ville:
@@ -122,7 +145,6 @@ def chat():
             image_url = image_ville_info.iloc[0]['image_ville_url']
             response += f'<br><img src="{image_url}" alt="Image de la ville" width="400" style="padding-right: 20px;">'
     else:
-        # Vérifier si c’est un monument
         meilleure_monument = trouver_meilleure_correspondance(entite_sans_accent, liste_monuments)
         if meilleure_monument:
             monument_info = monument_df[monument_df['nom_noaccent'] == meilleure_monument].iloc[0]
@@ -133,11 +155,11 @@ def chat():
                             f"{monument_info['description']} Pour en savoir plus : {monument_info['lien_wikipedia']}.")
                 response += f'<br><img src="{monument_info["image_monument_url"]}" alt="Image du monument" width="300">'
 
-    # Traduction
+    # Traduction finale
     if langue_message == 'ar':
-        response = GoogleTranslator(source='fr', target='ar').translate(response)
+        response = traduire_texte_sans_html(response, 'fr', 'ar')
     elif langue_message == 'en':
-        response = GoogleTranslator(source='fr', target='en').translate(response)
+        response = traduire_texte_sans_html(response, 'fr', 'en')
 
     return jsonify({"response": response})
 
