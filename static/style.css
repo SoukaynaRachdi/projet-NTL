@@ -202,4 +202,37 @@ body {
 .image-ville-monument:hover {
     transform: scale(1.05);  /* Effet de zoom */
 }
+.div1 {
+    display: flex;
+    align-items: center;  /* Aligner verticalement */
+    border: 1px solid #ccc;
+      /* Bordure autour du conteneur */
+    border-radius: 8px;  /* Bordures arrondies */
+    padding: 5px;  /* Espacement interne */
+    gap: 10px;  /* Espacement entre l'input et le bouton */
+    width: 100%;  /* Largeur du conteneur */
+    background-color: white;
+}
 
+#user-input {
+    flex: 1;  /* Prend toute la place disponible */
+    padding: 10px;
+    border: none;  /* Supprime la bordure par défaut */
+    font-size: 1em;
+    border-radius: 8px;  /* Bordures arrondies internes */
+}
+
+#mic-button {
+    padding: 8px 12px;
+    
+    color: white;
+    border: none;
+    border-radius: 8px;  /* Bordures arrondies */
+    cursor: pointer;
+    font-size: 1.1em;
+    transition: background-color 0.3s ease;
+}
+
+#mic-button:hover {
+    background-color: #abd7f5;
+}

@@ -152,3 +152,60 @@ function playAudio() {
 }
 
 document.getElementById('audioButton').addEventListener('click', playAudio);
+// Initialiser la reconnaissance vocale
+const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+recognition.lang = 'fr-FR'; // Définir la langue (français ici)
+recognition.continuous = false; // La reconnaissance ne continue pas après une phrase
+recognition.interimResults = false; // Pas de résultats intermédiaires
+
+// Bouton microphone pour démarrer la reconnaissance vocale
+document.getElementById('mic-button').addEventListener('click', function () {
+    recognition.start(); // Démarrer la reconnaissance vocale
+    console.log("Démarrage de la reconnaissance vocale...");
+});
+
+// Quand la reconnaissance vocale capte une phrase
+recognition.onresult = function (event) {
+    const transcript = event.results[0][0].transcript; // Le texte détecté par la reconnaissance
+    console.log("Texte détecté : ", transcript);
+    
+    // Ajouter le message vocal dans la chatbox
+    const chatBox = document.getElementById('chat-box');
+    const userMessage = document.createElement('div');
+    userMessage.classList.add('user-message');
+    userMessage.textContent = transcript; // Afficher le texte dans la chatbox
+    chatBox.appendChild(userMessage);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    // Envoyer le message capturé à l'API Flask pour obtenir une réponse
+    fetch("/chat", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            message: transcript
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const botMessage = document.createElement('div');
+        botMessage.classList.add('bot-message');
+        botMessage.innerHTML = data.response; // Afficher la réponse du bot
+        chatBox.appendChild(botMessage);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    })
+    .catch(error => {
+        console.error("Erreur:", error);
+    });
+};
+
+// Gestion des erreurs de la reconnaissance vocale
+recognition.onerror = function (event) {
+    console.error("Erreur de reconnaissance vocale:", event.error);
+};
+
+// Quand la reconnaissance vocale se termine
+recognition.onend = function () {
+    console.log("Reconnaissance vocale terminée");
+};
