@@ -87,3 +87,68 @@ document.getElementById('map-button').addEventListener('click', function() {
     window.open('https://www.google.com/maps', '_blank');
 });
 
+let currentUtterance = null;
+let isSpeaking = false;
+let availableVoices = [];
+
+// Chargement des voix au début
+window.speechSynthesis.onvoiceschanged = () => {
+    availableVoices = speechSynthesis.getVoices();
+};
+
+// Fonction pour détecter la langue du texte (simplement)
+function detectLanguage(text) {
+    const arabicRegex = /[\u0600-\u06FF]/;
+    const frenchRegex = /[éèêàùâçîôëï]/i;
+    const englishRegex = /^[a-zA-Z0-9.,!?'"()\s]+$/;
+
+    if (arabicRegex.test(text)) return 'ar';
+    if (frenchRegex.test(text)) return 'fr';
+    if (englishRegex.test(text)) return 'en';
+
+    return 'fr'; // Par défaut, on suppose le français
+}
+
+// Fonction pour lire le message avec la bonne langue
+function playAudio() {
+    const chatBox = document.getElementById('chat-box');
+    const lastBotMessage = chatBox.querySelector('.bot-message:last-child');
+
+    if (!lastBotMessage) {
+        console.log("Aucun message du bot à lire.");
+        return;
+    }
+
+    const message = lastBotMessage.innerText;
+    const audioButton = document.getElementById('audioButton');
+
+    if (isSpeaking) {
+        speechSynthesis.cancel();
+        isSpeaking = false;
+        audioButton.textContent = "🔊";
+        return;
+    }
+
+    const lang = detectLanguage(message);
+    const selectedVoice = availableVoices.find(v => v.lang.startsWith(lang));
+
+    if (!selectedVoice) {
+        console.log("Aucune voix trouvée pour la langue :", lang);
+        return;
+    }
+
+    currentUtterance = new SpeechSynthesisUtterance(message);
+    currentUtterance.lang = selectedVoice.lang;
+    currentUtterance.voice = selectedVoice;
+
+    speechSynthesis.speak(currentUtterance);
+    isSpeaking = true;
+    audioButton.textContent = "⏹️";
+
+    currentUtterance.onend = () => {
+        isSpeaking = false;
+        audioButton.textContent = "🔊";
+    };
+}
+
+document.getElementById('audioButton').addEventListener('click', playAudio);
