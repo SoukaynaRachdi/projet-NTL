@@ -120,7 +120,7 @@ def chat():
                 else:
                     response = "Je n'ai pas trouvé de monuments correspondant à votre demande."
 
-        # Traduction finale
+        # Ajouter l'image avec la classe CSS
         if langue_message == 'ar':
             response = traduire_texte_sans_html(response, 'fr', 'ar')
         elif langue_message == 'en':
@@ -143,7 +143,8 @@ def chat():
         image_ville_info = monument_df[monument_df['ville_noaccent'] == meilleure_ville].drop_duplicates()
         if not image_ville_info.empty:
             image_url = image_ville_info.iloc[0]['image_ville_url']
-            response += f'<br><img src="{image_url}" alt="Image de la ville" width="400" style="padding-right: 20px;">'
+            response += f'<br><img src="{image_url}" alt="Image de la ville" class="image-ville-monument">'
+
     else:
         meilleure_monument = trouver_meilleure_correspondance(entite_sans_accent, liste_monuments)
         if meilleure_monument:
@@ -153,7 +154,7 @@ def chat():
             else:
                 response = (f"{monument_info['nom']} est un {monument_info['type']} situé à {monument_info['ville']}. "
                             f"{monument_info['description']} Pour en savoir plus : {monument_info['lien_wikipedia']}.")
-                response += f'<br><img src="{monument_info["image_monument_url"]}" alt="Image du monument" width="300">'
+                response += f'<br><img src="{monument_info["image_monument_url"]}" alt="Image du monument" class="image-ville-monument">'
 
     # Traduction finale
     if langue_message == 'ar':
@@ -162,6 +163,7 @@ def chat():
         response = traduire_texte_sans_html(response, 'fr', 'en')
 
     return jsonify({"response": response})
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

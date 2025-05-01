@@ -185,3 +185,20 @@ body {
     justify-content: center;
     z-index: 1000;
 }
+/* Style pour les images de villes et monuments */
+.image-ville-monument {
+    width: 100%;
+    max-width: 400px;  /* Taille maximale de l'image */
+    border: 5px solid #ddd;  /* Bordure grise autour de l'image */
+    border-radius: 8px;  /* Bordures arrondies */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);  /* Ombre sous l'image */
+    transition: transform 0.3s ease;  /* Transition douce pour l'effet de zoom */
+    margin-top: 20px;
+    margin-bottom: 20px;
+    margin-left:70px
+}
+
+/* Effet au survol de l'image */
+.image-ville-monument:hover {
+    transform: scale(1.05);  /* Effet de zoom */
+}
