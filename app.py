@@ -102,7 +102,6 @@ def chat():
     entite_sans_accent = enlever_accents(entite.lower())
     response = "Désolé, je n'ai pas compris votre demande."
 
-    # Cas "monument"
     if intention == "monument":
         if "maroc" in entite.lower():
             monuments = monument_df[['nom', 'ville', 'type']].dropna().drop_duplicates()
@@ -114,49 +113,63 @@ def chat():
             if meilleure_ville:
                 monuments_ville = monument_df[monument_df['ville_noaccent'] == meilleure_ville].drop_duplicates()
                 if not monuments_ville.empty:
-                    response = f"Voici quelques monuments situés à {monuments_ville.iloc[0]['ville']} :<br>"
+                    response = f"<div class='monuments-container'>"
+                    response += f"<h3>Voici quelques monuments situés à {monuments_ville.iloc[0]['ville']} :</h3>"
                     for _, row in monuments_ville.iterrows():
-                        response += f"- {row['nom']} ({row['type']})<br>"
+                        description = row["description"]
+                        # Traduire si nécessaire
+                        if langue_message != 'en':
+                            try:
+                                description = GoogleTranslator(source='en', target=langue_message).translate(description)
+                            except:
+                                pass
+                        response += f'''
+                            <div class="monument-cadre">
+                                <img src="{row["image_monument_url"]}" alt="Image du monument" class="image-ville-monument">
+                                <div class="monument-details">
+                                    <p><strong>{row["nom"]} ({row["type"]})</strong></p>
+                                    <p><strong>{description} ({row["type"]})</strong></p>
+                                    <p><a href="{row["lien_wikipedia"]}" target="_blank">Wikipedia</a></p>
+                                </div>
+                            </div>
+                        '''
+                    response += "</div>"
                 else:
                     response = "Je n'ai pas trouvé de monuments correspondant à votre demande."
-
-        # Ajouter l'image avec la classe CSS
-        if langue_message == 'ar':
-            response = traduire_texte_sans_html(response, 'fr', 'ar')
-        elif langue_message == 'en':
-            response = traduire_texte_sans_html(response, 'fr', 'en')
-
-        return jsonify({"response": response})
-
-    # Autres intentions
-    meilleure_ville = trouver_meilleure_correspondance(entite_sans_accent, liste_villes)
-
-    if meilleure_ville:
-        ville_info = ma_df[ma_df['city_noaccent'] == meilleure_ville].iloc[0]
-        if intention == "population":
-            response = f"La population de {ville_info['city']} est de {ville_info['population']} habitants."
-        elif intention == "ville":
-            response = f"{ville_info['city']} est une ville située en {ville_info['country']}."
-        else:
-            response = f"{ville_info['city']} est une ville du {ville_info['country']} avec une population de {ville_info['population']} habitants."
-
-        image_ville_info = monument_df[monument_df['ville_noaccent'] == meilleure_ville].drop_duplicates()
-        if not image_ville_info.empty:
-            image_url = image_ville_info.iloc[0]['image_ville_url']
-            response += f'<br><img src="{image_url}" alt="Image de la ville" class="image-ville-monument">'
-
     else:
-        meilleure_monument = trouver_meilleure_correspondance(entite_sans_accent, liste_monuments)
-        if meilleure_monument:
-            monument_info = monument_df[monument_df['nom_noaccent'] == meilleure_monument].iloc[0]
-            if intention == "ville":
-                response = f"Le monument {monument_info['nom']} est situé à {monument_info['ville']}."
-            else:
-                response = (f"{monument_info['nom']} est un {monument_info['type']} situé à {monument_info['ville']}. "
-                            f"{monument_info['description']} Pour en savoir plus : {monument_info['lien_wikipedia']}.")
-                response += f'<br><img src="{monument_info["image_monument_url"]}" alt="Image du monument" class="image-ville-monument">'
+        meilleure_ville = trouver_meilleure_correspondance(entite_sans_accent, liste_villes)
 
-    # Traduction finale
+        if meilleure_ville:
+            ville_info = ma_df[ma_df['city_noaccent'] == meilleure_ville].iloc[0]
+            if intention == "population":
+                response = f"La population de {ville_info['city']} est de {ville_info['population']} habitants."
+            elif intention == "ville":
+                response = f"{ville_info['city']} est une ville située en {ville_info['country']}."
+            else:
+                response = f"{ville_info['city']} est une ville du {ville_info['country']} avec une population de {ville_info['population']} habitants."
+
+            image_ville_info = monument_df[monument_df['ville_noaccent'] == meilleure_ville].drop_duplicates()
+            if not image_ville_info.empty:
+                image_url = image_ville_info.iloc[0]['image_ville_url']
+                response += f'<br><img src="{image_url}" alt="Image de la ville" class="image-ville-monument">'
+        else:
+            meilleure_monument = trouver_meilleure_correspondance(entite_sans_accent, liste_monuments)
+            if meilleure_monument:
+                monument_info = monument_df[monument_df['nom_noaccent'] == meilleure_monument].iloc[0]
+                description = monument_info['description']
+                if langue_message != 'en':
+                    try:
+                        description = GoogleTranslator(source='en', target=langue_message).translate(description)
+                    except:
+                        pass
+                if intention == "ville":
+                    response = f"Le monument {monument_info['nom']} est situé à {monument_info['ville']}."
+                else:
+                    response = (f"{monument_info['nom']} est un {monument_info['type']} situé à {monument_info['ville']}. "
+                                f"{description} Pour en savoir plus : {monument_info['lien_wikipedia']}.")
+                    response += f'<br><img src="{monument_info["image_monument_url"]}" alt="Image du monument" class="image-ville-monument">'
+
+    # Traduction finale du message généré (structure HTML), sauf description déjà traduite
     if langue_message == 'ar':
         response = traduire_texte_sans_html(response, 'fr', 'ar')
     elif langue_message == 'en':
@@ -164,6 +177,5 @@ def chat():
 
     return jsonify({"response": response})
 
-
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
