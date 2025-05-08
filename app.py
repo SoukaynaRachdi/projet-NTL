@@ -39,7 +39,10 @@ def suggestion_proactive(intention, entite, langue):
     # Enregistrer le contexte dans la session
     session['suggested_intention'] = intention
     session['suggested_entite'] = entite
-    return suggestion
+    return f"<div class='bot-message suggestion-box'>{suggestion}</div>"
+
+
+
 
 def is_affirmative(text):
     text = text.lower()
