@@ -16,7 +16,7 @@ app = Flask(__name__)
 
 # Configurer la clé secrète pour signer les sessions
 app.secret_key = os.urandom(24)  # Génère une clé secrète aléatoire de 24 octets
-# Configuration pour utiliser le stockage des sessions sur le système de fichiers
+#Configuration pour utiliser le stockage des sessions sur le système de fichiers
 app.config['SESSION_TYPE'] = 'filesystem'  # Stocker les sessions sur le disque
 Session(app)
 
@@ -56,7 +56,10 @@ def get_response(intention, entite, langue_message):
     if intention == "monument" and entite:
         monuments = monument_df[monument_df['ville_noaccent'] == enlever_accents(entite.lower())].drop_duplicates()
         if not monuments.empty:
-            response = f"Voici quelques monuments situés à {entite} :<br>"
+            response = f"<div class='monuments-container'>"
+            #response = f"<h3>Voici quelques monuments situés à {entite} :<h3>"
+
+
             for _, row in monuments.iterrows():
                 description = row["description"]
                 if langue_message != 'en':
@@ -74,6 +77,7 @@ def get_response(intention, entite, langue_message):
                         </div>
                     </div>
                 '''
+            response += "</div>"
         else:
             response = "Je n'ai pas trouvé de monuments correspondant à votre demande."
     else:
@@ -152,6 +156,8 @@ def trouver_meilleure_correspondance(entite, liste_valeurs):
 
 @app.route("/chat", methods=["POST"])
 def chat():
+    
+    
     user_message = request.json.get("message")
     langue_message = detect(user_message)
 
@@ -159,7 +165,8 @@ def chat():
     if langue_message == 'ar':
         user_message = GoogleTranslator(source='ar', target='fr').translate(user_message)
 
-      # 🔁 Gérer les réponses "oui" ou "non" en priorité
+
+
     if is_affirmative(user_message):
         suggested_intention = session.get('suggested_intention')
         suggested_entite = session.get('suggested_entite')
@@ -170,45 +177,56 @@ def chat():
         response = ""
 
         if suggested_intention == "monument":
-            response = f"Voici quelques monuments célèbres de {suggested_entite} : [liste ici]."
-
+            
+            response = f"""
+            <div class="affirmative-response">
+                <h3>Voici quelques monuments célèbres de {suggested_entite} :</h3>
+                <div class="monuments-container">
+                    [Liste des monuments ici, selon votre logique actuelle]
+                </div>
+            </div>
+        """
         elif suggested_intention == "monument_details":
-            response = f"Voici plus de détails sur un monument de {suggested_entite} : [détails ici]."
+        
+            response = f"""
+            <div class="affirmative-response">
+                <h3>Voici plus de détails sur un monument de {suggested_entite} :</h3>
+                    [Détails du monument ici, selon votre logique actuelle]
+            </div>
+            """
 
         elif suggested_intention == "ville":
-            # Appel à la fonction principale pour retourner les monuments de la ville
             response = get_response("monument", suggested_entite, langue_message)
 
         # Nettoyage du contexte
+         
         session.pop('suggested_intention', None)
         session.pop('suggested_entite', None)
 
         # Si get_response retourne déjà une réponse JSON
         if isinstance(response, dict):
-            return jsonify(response)
+            
+           return jsonify(response)
 
         # Traduction de la réponse si besoin
         if langue_message == 'ar':
             response = traduire_texte_sans_html(response, 'fr', 'ar')
         elif langue_message == 'en':
             response = traduire_texte_sans_html(response, 'fr', 'en')
-
+            
         return jsonify({"response": response})
 
+    # Handling the negative response
     elif is_negative(user_message):
         response = "D'accord, n'hésitez pas à poser une autre question."
-
         if langue_message == 'ar':
             response = traduire_texte_sans_html(response, 'fr', 'ar')
         elif langue_message == 'en':
             response = traduire_texte_sans_html(response, 'fr', 'en')
-
         return jsonify({"response": response})
 
 
     
-   
-
     doc = nlp(user_message)
     intention = detect_intention(user_message)
 
