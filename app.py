@@ -6,8 +6,81 @@ from langdetect import detect
 from deep_translator import GoogleTranslator
 from rapidfuzz import process, fuzz
 import re
+from flask import session
+from flask_session import Session
+import os
+
+
 
 app = Flask(__name__)
+
+# Configurer la clé secrète pour signer les sessions
+app.secret_key = os.urandom(24)  # Génère une clé secrète aléatoire de 24 octets
+# Configuration pour utiliser le stockage des sessions sur le système de fichiers
+app.config['SESSION_TYPE'] = 'filesystem'  # Stocker les sessions sur le disque
+Session(app)
+
+
+def suggestion_proactive(intention, entite, langue):
+    suggestion = ""
+    if intention == "ville" and entite:
+        suggestion = f"Souhaitez-vous découvrir les monuments de {entite} ?"
+    elif intention == "monument" and entite:
+        type_monument = monument_df[monument_df['nom_noaccent'] == enlever_accents(entite.lower())]['type']
+        if not type_monument.empty:
+            type_ = type_monument.values[0]
+            suggestion = f"Souhaitez-vous voir d'autres monuments du type {type_} ?"
+
+    if langue == 'ar':
+        suggestion = GoogleTranslator(source='fr', target='ar').translate(suggestion)
+    elif langue == 'en':
+        suggestion = GoogleTranslator(source='fr', target='en').translate(suggestion)
+
+    # Enregistrer le contexte dans la session
+    session['suggested_intention'] = intention
+    session['suggested_entite'] = entite
+    return suggestion
+
+def is_affirmative(text):
+    text = text.lower()
+    affirmations = ["oui", "yes", "montre moi", "ok, c'est parti", "d'accord", "show me"]
+    return any(phrase in text for phrase in affirmations)
+
+def is_negative(text):
+    text = text.lower()
+    negatives = ["non", "no", "pas", "ne veux pas"]
+    return any(phrase in text for phrase in negatives)
+
+def get_response(intention, entite, langue_message):
+    response = ""
+    if intention == "monument" and entite:
+        monuments = monument_df[monument_df['ville_noaccent'] == enlever_accents(entite.lower())].drop_duplicates()
+        if not monuments.empty:
+            response = f"Voici quelques monuments situés à {entite} :<br>"
+            for _, row in monuments.iterrows():
+                description = row["description"]
+                if langue_message != 'en':
+                    try:
+                        description = GoogleTranslator(source='en', target=langue_message).translate(description)
+                    except:
+                        pass
+                response += f'''
+                    <div class="monument-cadre">
+                        <img src="{row["image_monument_url"]}" alt="Image du monument" class="image-ville-monument">
+                        <div class="monument-details">
+                            <p><strong>{row["nom"]} ({row["type"]})</strong></p>
+                            <p>{description}</p>
+                            <p><a href="{row["lien_wikipedia"]}" target="_blank">Wikipedia</a></p>
+                        </div>
+                    </div>
+                '''
+        else:
+            response = "Je n'ai pas trouvé de monuments correspondant à votre demande."
+    else:
+        response = "Désolé, je n'ai pas pu répondre à votre demande."
+
+    return response
+
 
 # Fonction pour enlever les accents
 def enlever_accents(texte):
@@ -86,6 +159,56 @@ def chat():
     if langue_message == 'ar':
         user_message = GoogleTranslator(source='ar', target='fr').translate(user_message)
 
+      # 🔁 Gérer les réponses "oui" ou "non" en priorité
+    if is_affirmative(user_message):
+        suggested_intention = session.get('suggested_intention')
+        suggested_entite = session.get('suggested_entite')
+
+        print(f"Intention suggérée : {suggested_intention}")
+        print(f"Entité suggérée : {suggested_entite}")
+
+        response = ""
+
+        if suggested_intention == "monument":
+            response = f"Voici quelques monuments célèbres de {suggested_entite} : [liste ici]."
+
+        elif suggested_intention == "monument_details":
+            response = f"Voici plus de détails sur un monument de {suggested_entite} : [détails ici]."
+
+        elif suggested_intention == "ville":
+            # Appel à la fonction principale pour retourner les monuments de la ville
+            response = get_response("monument", suggested_entite, langue_message)
+
+        # Nettoyage du contexte
+        session.pop('suggested_intention', None)
+        session.pop('suggested_entite', None)
+
+        # Si get_response retourne déjà une réponse JSON
+        if isinstance(response, dict):
+            return jsonify(response)
+
+        # Traduction de la réponse si besoin
+        if langue_message == 'ar':
+            response = traduire_texte_sans_html(response, 'fr', 'ar')
+        elif langue_message == 'en':
+            response = traduire_texte_sans_html(response, 'fr', 'en')
+
+        return jsonify({"response": response})
+
+    elif is_negative(user_message):
+        response = "D'accord, n'hésitez pas à poser une autre question."
+
+        if langue_message == 'ar':
+            response = traduire_texte_sans_html(response, 'fr', 'ar')
+        elif langue_message == 'en':
+            response = traduire_texte_sans_html(response, 'fr', 'en')
+
+        return jsonify({"response": response})
+
+
+    
+   
+
     doc = nlp(user_message)
     intention = detect_intention(user_message)
 
@@ -102,10 +225,17 @@ def chat():
     entite_sans_accent = enlever_accents(entite.lower())
     response = "Désolé, je n'ai pas compris votre demande."
 
+ 
+
     if intention == "monument":
         if "maroc" in entite.lower():
             monuments = monument_df[['nom', 'ville', 'type']].dropna().drop_duplicates()
             response = "Voici une liste de monuments célèbres au Maroc :<br>"
+             # Enregistrer l'intention et l'entité pour référence dans la session
+             
+            session['suggested_intention'] = 'monument_details'
+            session['suggested_entite'] = entite
+
             for _, row in monuments.iterrows():
                 response += f"- {row['nom']} à {row['ville']} ({row['type']})<br>"
         else:
@@ -145,8 +275,14 @@ def chat():
                 response = f"La population de {ville_info['city']} est de {ville_info['population']} habitants."
             elif intention == "ville":
                 response = f"{ville_info['city']} est une ville située en {ville_info['country']}."
+                suggestion = suggestion_proactive("ville", entite, langue_message)
+                response += f"<br>{suggestion}"
+
+
             else:
                 response = f"{ville_info['city']} est une ville du {ville_info['country']} avec une population de {ville_info['population']} habitants."
+                suggestion = suggestion_proactive("ville", entite, langue_message)
+                response += f"<br>{suggestion}"
 
             image_ville_info = monument_df[monument_df['ville_noaccent'] == meilleure_ville].drop_duplicates()
             if not image_ville_info.empty:
@@ -168,6 +304,10 @@ def chat():
                     response = (f"{monument_info['nom']} est un {monument_info['type']} situé à {monument_info['ville']}. "
                                 f"{description} Pour en savoir plus : {monument_info['lien_wikipedia']}.")
                     response += f'<br><img src="{monument_info["image_monument_url"]}" alt="Image du monument" class="image-ville-monument">'
+    
+    
+
+   
 
     # Traduction finale du message généré (structure HTML), sauf description déjà traduite
     if langue_message == 'ar':
@@ -177,5 +317,7 @@ def chat():
 
     return jsonify({"response": response})
 
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)
+
