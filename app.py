@@ -9,6 +9,95 @@ import re
 
 app = Flask(__name__)
 
+
+
+
+
+# Fonction de traduction
+def traduire_texte(texte, source_lang, target_lang):
+    if source_lang != target_lang:
+        return GoogleTranslator(source=source_lang, target=target_lang).translate(texte)
+    return texte
+
+# Fonction pour extraire l'entité d'un message
+def extraire_entite(message):
+    doc = nlp(message)
+    for ent in doc.ents:
+        if ent.label_ in ["LOC", "PER", "MISC"]:
+            return ent.text
+    return message.strip()
+
+# Fonction pour nettoyer le texte des villes
+def nettoyer_texte(texte):
+    return texte.strip().lower()
+
+# Fonction pour trouver la meilleure ville correspondant à l'entité
+def trouver_meilleure_ville(entite):
+    villes = monument_df['ville'].str.lower().tolist()
+    best_match = max(villes, key=lambda city: fuzz.partial_ratio(city, entite.lower()))
+    if fuzz.partial_ratio(best_match, entite.lower()) > 80:  # Ajustez ce seuil selon vos besoins
+        return best_match
+    return None
+
+# Fonction pour générer la réponse des monuments
+def repondre_monuments(entite, intention, langue_message):
+    response = "Désolé, je n'ai pas compris votre demande."
+    if intention == "monument":
+        if "maroc" in entite.lower():
+            monuments = monument_df[['nom', 'ville', 'description', 'image_monument_url', 'lien_wikipedia']].dropna().drop_duplicates()
+            response = "<div class='monuments-container'>"
+            response += "<h3>Voici une liste de monuments célèbres au Maroc :</h3>"
+            for _, row in monuments.iterrows():
+                description_fr = traduire_texte(row['description'], 'en', 'fr')
+                response += f'''
+                    <div class="monument-cadre">
+                        <img src="{row["image_monument_url"]}" alt="Image du monument" class="image-ville-monument">
+                        <div class="monument-details">
+                            <p><strong>{row["nom"]} ({row["ville"]})</strong></p>
+                            <p>{description_fr}</p>
+                            <p><a href="{row["lien_wikipedia"]}" target="_blank">Wikipedia</a></p>
+                        </div>
+                    </div>
+                '''
+            response += "</div>"
+        else:
+            entite_nettoyee = nettoyer_texte(entite)
+            meilleure_ville = None
+            for ville in monument_df['ville']:
+                ville_nettoyee = nettoyer_texte(ville)
+                if fuzz.partial_ratio(entite_nettoyee, ville_nettoyee) > 80:
+                    meilleure_ville = ville
+                    break
+            if meilleure_ville:
+                monuments_ville = monument_df[monument_df['ville'].str.lower() == meilleure_ville.lower()].drop_duplicates()
+                if not monuments_ville.empty:
+                    response = f"<div class='monuments-container'>"
+                    response += f"<h3>Voici quelques monuments situés à {meilleure_ville} :</h3>"
+                    for _, row in monuments_ville.iterrows():
+                        description_fr = traduire_texte(row['description'], 'en', 'fr')
+                        response += f'''
+                            <div class="monument-cadre">
+                                <img src="{row["image_monument_url"]}" alt="Image du monument" class="image-ville-monument">
+                                <div class="monument-details">
+                                    <p><strong>{row["nom"]} ({row["ville"]})</strong></p>
+                                    <p>{description_fr}</p>
+                                    <p><a href="{row["lien_wikipedia"]}" target="_blank">Wikipedia</a></p>
+                                </div>
+                            </div>
+                        '''
+                    response += "</div>"
+                else:
+                    response = f"Je n'ai pas trouvé de monuments pour la ville {meilleure_ville}."
+            else:
+                response = "Je n'ai pas trouvé la ville mentionnée dans notre base de données."
+    return response
+
+
+
+
+
+
+
 # Fonction pour enlever les accents
 def enlever_accents(texte):
     return ''.join(
@@ -45,6 +134,7 @@ fichier_csv1 = 'monuments_maroc.csv'
 fichier_csv2 = 'ma.csv'
 monument_df = pd.read_csv(fichier_csv1)
 ma_df = pd.read_csv(fichier_csv2)
+print(monument_df[monument_df["ville"].str.lower().str.contains("oujda")])
 
 # Ajouter colonnes sans accents
 ma_df['city_noaccent'] = ma_df['city'].apply(lambda x: enlever_accents(str(x).lower()))
@@ -99,7 +189,6 @@ def detect_intention(text):
         return "general"
 
 
-
 # Matching flou
 def trouver_meilleure_correspondance(entite, liste_valeurs):
     result = process.extractOne(entite, liste_valeurs, scorer=fuzz.WRatio)
@@ -112,6 +201,7 @@ def trouver_meilleure_correspondance(entite, liste_valeurs):
 
 @app.route("/chat", methods=["POST"])
 def chat():
+
     user_message = request.json.get("message")
     langue_message = detect(user_message)
 
@@ -139,49 +229,8 @@ def chat():
 
     # Cas "monument"
     if intention == "monument":
-        if "maroc" in entite.lower():
-            monuments = monument_df[['nom', 'ville', 'type', 'description', 'image_monument_url', 'lien_wikipedia']].dropna().drop_duplicates()
-            response = "Voici une liste de monuments célèbres au Maroc :<br>"
-            response = "<div class='monuments-container'>"
-            response += "<h3>Voici une liste de monuments célèbres au Maroc :</h3>"
-
-            for _, row in monuments.iterrows():
-                description_fr = traduire_description_en_francais(row['description'], 'en')
-                response += f'''
-                    <div class="monument-cadre" style="margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px;">
-                        <img src="{row["image_monument_url"]}" alt="Image du monument" class="image-ville-monument" style="width: 200px; height: auto;">
-                        <div class="monument-details">
-                            <p><strong>{row["nom"]} ({row["type"]})</strong></p>
-                            <p>{description_fr}</p>
-                            <p><a href="{row["lien_wikipedia"]}" target="_blank">Wikipedia</a></p>
-                        </div>
-                    </div>
-                '''
-            response += "</div>"
-        else:
-            meilleure_ville = trouver_meilleure_correspondance(entite_sans_accent, liste_villes)
-            if meilleure_ville:
-                monuments_ville = monument_df[monument_df['ville_noaccent'] == meilleure_ville].drop_duplicates()
-                if not monuments_ville.empty:
-                    response = f"<div class='monuments-container'>"
-                    response += f"<h3>Voici quelques monuments situés à {monuments_ville.iloc[0]['ville']} :</h3>"
-                    for _, row in monuments_ville.iterrows():
-                        description_fr = traduire_description_en_francais(row['description'], 'en')  # Traduire en français
-                        response += f'''
-                            <div class="monument-cadre">
-                                <img src="{row["image_monument_url"]}" alt="Image du monument" class="image-ville-monument">
-                                <div class="monument-details">
-                                    <p><strong>{row["nom"]} ({row["type"]})</strong></p>
-                                    <p>{description_fr}</p>
-                                    <p><a href="{row["lien_wikipedia"]}" target="_blank">Wikipedia</a></p>
-                                </div>
-                            </div>
-                        '''
-                    response += "</div>"
-
-                else:
-                    response = "Je n'ai pas trouvé de monuments correspondant à votre demande."
-
+        response = repondre_monuments(entite, intention, langue_message)
+        
         # Traduction en fonction de la langue de l'utilisateur
         if langue_message == 'ar':
             response = traduire_texte_sans_html(response, 'fr', 'ar')
@@ -227,4 +276,4 @@ def chat():
     return jsonify({"response": response})
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5001, debug=True)
