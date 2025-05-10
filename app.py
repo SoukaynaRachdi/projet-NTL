@@ -39,6 +39,13 @@ def trouver_meilleure_ville(entite):
         return best_match
     return None
 
+# Fonction pour enlever les accents
+def enlever_accents(texte):
+    return ''.join(
+        c for c in unicodedata.normalize('NFD', texte)
+        if unicodedata.category(c) != 'Mn'
+    )
+
 # Fonction pour générer la réponse des monuments
 def repondre_monuments(entite, intention, langue_message):
     response = "Désolé, je n'ai pas compris votre demande."
@@ -61,13 +68,14 @@ def repondre_monuments(entite, intention, langue_message):
                 '''
             response += "</div>"
         else:
-            entite_nettoyee = nettoyer_texte(entite)
+            entite_nettoyee = enlever_accents(entite.lower())
             meilleure_ville = None
             for ville in monument_df['ville']:
-                ville_nettoyee = nettoyer_texte(ville)
+                ville_nettoyee = enlever_accents(ville.lower())
                 if fuzz.partial_ratio(entite_nettoyee, ville_nettoyee) > 80:
                     meilleure_ville = ville
                     break
+
             if meilleure_ville:
                 monuments_ville = monument_df[monument_df['ville'].str.lower() == meilleure_ville.lower()].drop_duplicates()
                 if not monuments_ville.empty:
@@ -98,12 +106,7 @@ def repondre_monuments(entite, intention, langue_message):
 
 
 
-# Fonction pour enlever les accents
-def enlever_accents(texte):
-    return ''.join(
-        c for c in unicodedata.normalize('NFD', texte)
-        if unicodedata.category(c) != 'Mn'
-    )
+
 
 # Fonction pour traduire uniquement le texte (sans balises HTML)
 def traduire_texte_sans_html(texte, langue_source, langue_cible):
