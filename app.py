@@ -6,88 +6,8 @@ from langdetect import detect
 from deep_translator import GoogleTranslator
 from rapidfuzz import process, fuzz
 import re
-from flask import session
-from flask_session import Session
-import os
-
-
 
 app = Flask(__name__)
-
-# Configurer la clé secrète pour signer les sessions
-app.secret_key = os.urandom(24)  # Génère une clé secrète aléatoire de 24 octets
-#Configuration pour utiliser le stockage des sessions sur le système de fichiers
-app.config['SESSION_TYPE'] = 'filesystem'  # Stocker les sessions sur le disque
-Session(app)
-
-
-def suggestion_proactive(intention, entite, langue):
-    suggestion = ""
-    if intention == "ville" and entite:
-        suggestion = f"Souhaitez-vous découvrir les monuments de {entite} ?"
-    elif intention == "monument" and entite:
-        type_monument = monument_df[monument_df['nom_noaccent'] == enlever_accents(entite.lower())]['type']
-        if not type_monument.empty:
-            type_ = type_monument.values[0]
-            suggestion = f"Souhaitez-vous voir d'autres monuments du type {type_} ?"
-
-    if langue == 'ar':
-        suggestion = GoogleTranslator(source='fr', target='ar').translate(suggestion)
-    elif langue == 'en':
-        suggestion = GoogleTranslator(source='fr', target='en').translate(suggestion)
-
-    # Enregistrer le contexte dans la session
-    session['suggested_intention'] = intention
-    session['suggested_entite'] = entite
-    return f"<div class='bot-message suggestion-box'>{suggestion}</div>"
-
-
-
-
-def is_affirmative(text):
-    text = text.lower()
-    affirmations = ["oui", "yes", "montre moi", "ok, c'est parti", "d'accord", "show me"]
-    return any(phrase in text for phrase in affirmations)
-
-def is_negative(text):
-    text = text.lower()
-    negatives = ["non", "no", "pas", "ne veux pas"]
-    return any(phrase in text for phrase in negatives)
-
-def get_response(intention, entite, langue_message):
-    response = ""
-    if intention == "monument" and entite:
-        monuments = monument_df[monument_df['ville_noaccent'] == enlever_accents(entite.lower())].drop_duplicates()
-        if not monuments.empty:
-            response = f"<div class='monuments-container'>"
-            #response = f"<h3>Voici quelques monuments situés à {entite} :<h3>"
-
-
-            for _, row in monuments.iterrows():
-                description = row["description"]
-                if langue_message != 'en':
-                    try:
-                        description = GoogleTranslator(source='en', target=langue_message).translate(description)
-                    except:
-                        pass
-                response += f'''
-                    <div class="monument-cadre">
-                        <img src="{row["image_monument_url"]}" alt="Image du monument" class="image-ville-monument">
-                        <div class="monument-details">
-                            <p><strong>{row["nom"]} ({row["type"]})</strong></p>
-                            <p>{description}</p>
-                            <p><a href="{row["lien_wikipedia"]}" target="_blank">Wikipedia</a></p>
-                        </div>
-                    </div>
-                '''
-            response += "</div>"
-        else:
-            response = "Je n'ai pas trouvé de monuments correspondant à votre demande."
-    else:
-        response = "Désolé, je n'ai pas pu répondre à votre demande."
-
-    return response
-
 
 # Fonction pour enlever les accents
 def enlever_accents(texte):
@@ -110,6 +30,12 @@ def traduire_texte_sans_html(texte, langue_source, langue_cible):
             else:
                 segments_traduits.append(segment)
     return ''.join(segments_traduits)
+
+# Fonction pour traduire une description en français
+def traduire_description_en_francais(description, langue_source='en'):
+    if langue_source != 'fr':
+        return GoogleTranslator(source=langue_source, target='fr').translate(description)
+    return description
 
 # Charger le modèle SpaCy français
 nlp = spacy.load("fr_core_news_md")
@@ -136,16 +62,43 @@ def index():
 # Détecter l’intention d’une question
 def detect_intention(text):
     text = text.lower()
-    if "monument" in text:
+
+    # Monuments
+    if any(word in text for word in [
+        "monument", "monuments", "site", "sites", "lieu", "lieux",
+        "monument", "monuments",  # English
+        "معلم", "معالم", "آثار", "الأماكن التاريخية"  # Arabic
+    ]):
         return "monument"
-    elif "population" in text:
+
+    # Population
+    elif any(word in text for word in [
+        "population", "habitants",
+        "people", "inhabitants",
+        "عدد السكان", "سكان"  # Arabic
+    ]):
         return "population"
-    elif "ville" in text or "où" in text or "localisation" in text:
+
+    # Ville
+    elif any(word in text for word in [
+        "ville", "où", "localisation",
+        "city", "where", "location",
+        "مدينة", "أين", "مكان"  # Arabic
+    ]):
         return "ville"
-    elif "description" in text or "information" in text or "parle-moi" in text or "présente" in text:
+
+    # Description
+    elif any(word in text for word in [
+        "description", "présente", "parle-moi", "donne-moi", "infos",
+        "description", "information", "tell me", "introduce", "show me",
+        "وصف", "معلومات", "أخبرني", "اعطني", "عرفني", "قدم لي"  # Arabic
+    ]):
         return "description"
+
     else:
         return "general"
+
+
 
 # Matching flou
 def trouver_meilleure_correspondance(entite, liste_valeurs):
@@ -159,77 +112,15 @@ def trouver_meilleure_correspondance(entite, liste_valeurs):
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    
-    
     user_message = request.json.get("message")
     langue_message = detect(user_message)
 
     # Traduction du message arabe en français
     if langue_message == 'ar':
         user_message = GoogleTranslator(source='ar', target='fr').translate(user_message)
+    elif langue_message == 'en':
+        user_message = GoogleTranslator(source='en', target='fr').translate(user_message)
 
-
-
-    if is_affirmative(user_message):
-        suggested_intention = session.get('suggested_intention')
-        suggested_entite = session.get('suggested_entite')
-
-        print(f"Intention suggérée : {suggested_intention}")
-        print(f"Entité suggérée : {suggested_entite}")
-
-        response = ""
-
-        if suggested_intention == "monument":
-            
-            response = f"""
-            <div class="affirmative-response">
-                <h3>Voici quelques monuments célèbres de {suggested_entite} :</h3>
-                <div class="monuments-container">
-                    [Liste des monuments ici, selon votre logique actuelle]
-                </div>
-            </div>
-        """
-        elif suggested_intention == "monument_details":
-        
-            response = f"""
-            <div class="affirmative-response">
-                <h3>Voici plus de détails sur un monument de {suggested_entite} :</h3>
-                    [Détails du monument ici, selon votre logique actuelle]
-            </div>
-            """
-
-        elif suggested_intention == "ville":
-            response = get_response("monument", suggested_entite, langue_message)
-
-        # Nettoyage du contexte
-         
-        session.pop('suggested_intention', None)
-        session.pop('suggested_entite', None)
-
-        # Si get_response retourne déjà une réponse JSON
-        if isinstance(response, dict):
-            
-           return jsonify(response)
-
-        # Traduction de la réponse si besoin
-        if langue_message == 'ar':
-            response = traduire_texte_sans_html(response, 'fr', 'ar')
-        elif langue_message == 'en':
-            response = traduire_texte_sans_html(response, 'fr', 'en')
-            
-        return jsonify({"response": response})
-
-    # Handling the negative response
-    elif is_negative(user_message):
-        response = "D'accord, n'hésitez pas à poser une autre question."
-        if langue_message == 'ar':
-            response = traduire_texte_sans_html(response, 'fr', 'ar')
-        elif langue_message == 'en':
-            response = traduire_texte_sans_html(response, 'fr', 'en')
-        return jsonify({"response": response})
-
-
-    
     doc = nlp(user_message)
     intention = detect_intention(user_message)
 
@@ -246,19 +137,27 @@ def chat():
     entite_sans_accent = enlever_accents(entite.lower())
     response = "Désolé, je n'ai pas compris votre demande."
 
- 
-
+    # Cas "monument"
     if intention == "monument":
         if "maroc" in entite.lower():
-            monuments = monument_df[['nom', 'ville', 'type']].dropna().drop_duplicates()
+            monuments = monument_df[['nom', 'ville', 'type', 'description', 'image_monument_url', 'lien_wikipedia']].dropna().drop_duplicates()
             response = "Voici une liste de monuments célèbres au Maroc :<br>"
-             # Enregistrer l'intention et l'entité pour référence dans la session
-             
-            session['suggested_intention'] = 'monument_details'
-            session['suggested_entite'] = entite
+            response = "<div class='monuments-container'>"
+            response += "<h3>Voici une liste de monuments célèbres au Maroc :</h3>"
 
             for _, row in monuments.iterrows():
-                response += f"- {row['nom']} à {row['ville']} ({row['type']})<br>"
+                description_fr = traduire_description_en_francais(row['description'], 'en')
+                response += f'''
+                    <div class="monument-cadre" style="margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px;">
+                        <img src="{row["image_monument_url"]}" alt="Image du monument" class="image-ville-monument" style="width: 200px; height: auto;">
+                        <div class="monument-details">
+                            <p><strong>{row["nom"]} ({row["type"]})</strong></p>
+                            <p>{description_fr}</p>
+                            <p><a href="{row["lien_wikipedia"]}" target="_blank">Wikipedia</a></p>
+                        </div>
+                    </div>
+                '''
+            response += "</div>"
         else:
             meilleure_ville = trouver_meilleure_correspondance(entite_sans_accent, liste_villes)
             if meilleure_ville:
@@ -267,70 +166,59 @@ def chat():
                     response = f"<div class='monuments-container'>"
                     response += f"<h3>Voici quelques monuments situés à {monuments_ville.iloc[0]['ville']} :</h3>"
                     for _, row in monuments_ville.iterrows():
-                        description = row["description"]
-                        # Traduire si nécessaire
-                        if langue_message != 'en':
-                            try:
-                                description = GoogleTranslator(source='en', target=langue_message).translate(description)
-                            except:
-                                pass
+                        description_fr = traduire_description_en_francais(row['description'], 'en')  # Traduire en français
                         response += f'''
                             <div class="monument-cadre">
                                 <img src="{row["image_monument_url"]}" alt="Image du monument" class="image-ville-monument">
                                 <div class="monument-details">
                                     <p><strong>{row["nom"]} ({row["type"]})</strong></p>
-                                    <p><strong>{description} ({row["type"]})</strong></p>
+                                    <p>{description_fr}</p>
                                     <p><a href="{row["lien_wikipedia"]}" target="_blank">Wikipedia</a></p>
                                 </div>
                             </div>
                         '''
                     response += "</div>"
+
                 else:
                     response = "Je n'ai pas trouvé de monuments correspondant à votre demande."
-    else:
-        meilleure_ville = trouver_meilleure_correspondance(entite_sans_accent, liste_villes)
 
-        if meilleure_ville:
-            ville_info = ma_df[ma_df['city_noaccent'] == meilleure_ville].iloc[0]
-            if intention == "population":
-                response = f"La population de {ville_info['city']} est de {ville_info['population']} habitants."
-            elif intention == "ville":
-                response = f"{ville_info['city']} est une ville située en {ville_info['country']}."
-                suggestion = suggestion_proactive("ville", entite, langue_message)
-                response += f"<br>{suggestion}"
+        # Traduction en fonction de la langue de l'utilisateur
+        if langue_message == 'ar':
+            response = traduire_texte_sans_html(response, 'fr', 'ar')
+        elif langue_message == 'en':
+            response = traduire_texte_sans_html(response, 'fr', 'en')
 
+        return jsonify({"response": response})
 
-            else:
-                response = f"{ville_info['city']} est une ville du {ville_info['country']} avec une population de {ville_info['population']} habitants."
-                suggestion = suggestion_proactive("ville", entite, langue_message)
-                response += f"<br>{suggestion}"
+    # Autres intentions
+    meilleure_ville = trouver_meilleure_correspondance(entite_sans_accent, liste_villes)
 
-            image_ville_info = monument_df[monument_df['ville_noaccent'] == meilleure_ville].drop_duplicates()
-            if not image_ville_info.empty:
-                image_url = image_ville_info.iloc[0]['image_ville_url']
-                response += f'<br><img src="{image_url}" alt="Image de la ville" class="image-ville-monument">'
+    if meilleure_ville:
+        ville_info = ma_df[ma_df['city_noaccent'] == meilleure_ville].iloc[0]
+        if intention == "population":
+            response = f"La population de {ville_info['city']} est de {ville_info['population']} habitants."
+        elif intention == "ville":
+            response = f"{ville_info['city']} est une ville située en {ville_info['country']}."
         else:
-            meilleure_monument = trouver_meilleure_correspondance(entite_sans_accent, liste_monuments)
-            if meilleure_monument:
-                monument_info = monument_df[monument_df['nom_noaccent'] == meilleure_monument].iloc[0]
-                description = monument_info['description']
-                if langue_message != 'en':
-                    try:
-                        description = GoogleTranslator(source='en', target=langue_message).translate(description)
-                    except:
-                        pass
-                if intention == "ville":
-                    response = f"Le monument {monument_info['nom']} est situé à {monument_info['ville']}."
-                else:
-                    response = (f"{monument_info['nom']} est un {monument_info['type']} situé à {monument_info['ville']}. "
-                                f"{description} Pour en savoir plus : {monument_info['lien_wikipedia']}.")
-                    response += f'<br><img src="{monument_info["image_monument_url"]}" alt="Image du monument" class="image-ville-monument">'
-    
-    
+            response = f"{ville_info['city']} est une ville du {ville_info['country']} avec une population de {ville_info['population']} habitants."
 
-   
+        image_ville_info = monument_df[monument_df['ville_noaccent'] == meilleure_ville].drop_duplicates()
+        if not image_ville_info.empty:
+            image_url = image_ville_info.iloc[0]['image_ville_url']
+            response += f'<br><img src="{image_url}" alt="Image de la ville" class="image-ville-monument">'
 
-    # Traduction finale du message généré (structure HTML), sauf description déjà traduite
+    else:
+        meilleure_monument = trouver_meilleure_correspondance(entite_sans_accent, liste_monuments)
+        if meilleure_monument:
+            monument_info = monument_df[monument_df['nom_noaccent'] == meilleure_monument].iloc[0]
+            if intention == "ville":
+                response = f"Le monument {monument_info['nom']} est situé à {monument_info['ville']}."
+            else:
+                response = (f"{monument_info['nom']} est un {monument_info['type']} situé à {monument_info['ville']}. "
+                            f"{monument_info['description']} Pour en savoir plus : {monument_info['lien_wikipedia']}.")
+                response += f'<br><img src="{monument_info["image_monument_url"]}" alt="Image du monument" class="image-ville-monument">'
+
+    # Traduction en fonction de la langue de l'utilisateur (si besoin)
     if langue_message == 'ar':
         response = traduire_texte_sans_html(response, 'fr', 'ar')
     elif langue_message == 'en':
@@ -338,7 +226,5 @@ def chat():
 
     return jsonify({"response": response})
 
-
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000, debug=True)
-
+    app.run(host="0.0.0.0", port=5000, debug=True)

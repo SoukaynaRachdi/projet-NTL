@@ -6,11 +6,15 @@
     <title>Chatbot Touristique du Maroc</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
 </head>
 
 <body>
     <div class="chat-container">
-        <h2>💬 Assistant Touristique du Maroc</h2>
+        <h2><i class="fas fa-robot"></i> Assistant Touristique du Maroc</h2>
+
+
         <div id="chat-box">
             <!-- Les messages seront ajoutés ici -->
         </div>
@@ -19,24 +23,21 @@
             <div class="div1">
                 <input type="text" id="user-input" placeholder="Écrire un message...">
                 <button id="mic-button">
-                🎤
+                    <i class="fas fa-microphone"></i>
                 </button>
             </div>
 
             <div class="button-group">
-                <button id="send-button">Envoyer</button>
-                <button id="audioButton">🔊</button>
-                <button id="mic-button">
-                    🎤
+                <button id="audioButton" aria-label="Lire l'audio">
+                     <i class="fas fa-volume-up"></i>
                 </button>
-                
 
-
-                <button id="map-button">🗺️</button>
+                <button id="map-button"><i class="fas fa-map-marked-alt"></i></button>
+                <button id="send-button">Envoyer</button>
             </div>
         </div>
 
-        <button id="scroll-button">↓</button>
+        <button id="scroll-button"><i class="fas fa-arrow-down"></i></button>
     </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
